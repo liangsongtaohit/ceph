@@ -199,6 +199,17 @@ public:
     ASSERT_EQ(0U, features & features_to_disable);
   }
 
+  void expect_prepare_lock(MockOperationImageCtx &mock_image_ctx) {
+    EXPECT_CALL(*mock_image_ctx.state, prepare_lock(_))
+      .WillOnce(Invoke([](Context *on_ready) {
+	    on_ready->complete(0);
+	  }));
+  }
+
+  void expect_handle_prepare_lock_complete(MockOperationImageCtx &mock_image_ctx) {
+    EXPECT_CALL(*mock_image_ctx.state, handle_prepare_lock_complete());
+  }
+
   void expect_block_writes(MockOperationImageCtx &mock_image_ctx) {
     EXPECT_CALL(*mock_image_ctx.aio_work_queue, block_writes(_))
       .WillOnce(CompleteContext(0, mock_image_ctx.image_ctx->op_work_queue));
@@ -288,6 +299,7 @@ TEST_F(TestMockOperationEnableFeaturesRequest, All) {
   MockCreateObjectMapRequest mock_create_object_map_request;
 
   ::testing::InSequence seq;
+  expect_prepare_lock(mock_image_ctx);
   expect_block_writes(mock_image_ctx);
   expect_block_requests(mock_image_ctx);
   if (features_to_enable & RBD_FEATURE_JOURNALING) {
@@ -305,6 +317,7 @@ TEST_F(TestMockOperationEnableFeaturesRequest, All) {
   expect_notify_update(mock_image_ctx);
   expect_unblock_requests(mock_image_ctx);
   expect_unblock_writes(mock_image_ctx);
+  expect_handle_prepare_lock_complete(mock_image_ctx);
 
   C_SaferCond cond_ctx;
   MockEnableFeaturesRequest *req = new MockEnableFeaturesRequest(
@@ -341,6 +354,7 @@ TEST_F(TestMockOperationEnableFeaturesRequest, ObjectMap) {
   MockCreateObjectMapRequest mock_create_object_map_request;
 
   ::testing::InSequence seq;
+  expect_prepare_lock(mock_image_ctx);
   expect_block_writes(mock_image_ctx);
   if (mock_image_ctx.journal != nullptr) {
     expect_is_journal_replaying(*mock_image_ctx.journal);
@@ -354,6 +368,7 @@ TEST_F(TestMockOperationEnableFeaturesRequest, ObjectMap) {
   expect_notify_update(mock_image_ctx);
   expect_unblock_requests(mock_image_ctx);
   expect_unblock_writes(mock_image_ctx);
+  expect_handle_prepare_lock_complete(mock_image_ctx);
   expect_commit_op_event(mock_image_ctx, 0);
 
   C_SaferCond cond_ctx;
@@ -391,6 +406,7 @@ TEST_F(TestMockOperationEnableFeaturesRequest, ObjectMapError) {
   MockCreateObjectMapRequest mock_create_object_map_request;
 
   ::testing::InSequence seq;
+  expect_prepare_lock(mock_image_ctx);
   expect_block_writes(mock_image_ctx);
   if (mock_image_ctx.journal != nullptr) {
     expect_is_journal_replaying(*mock_image_ctx.journal);
@@ -403,6 +419,7 @@ TEST_F(TestMockOperationEnableFeaturesRequest, ObjectMapError) {
     mock_image_ctx, mock_create_object_map_request, -EINVAL);
   expect_unblock_requests(mock_image_ctx);
   expect_unblock_writes(mock_image_ctx);
+  expect_handle_prepare_lock_complete(mock_image_ctx);
   expect_commit_op_event(mock_image_ctx, -EINVAL);
 
   C_SaferCond cond_ctx;
@@ -440,6 +457,7 @@ TEST_F(TestMockOperationEnableFeaturesRequest, SetFlagsError) {
   MockCreateObjectMapRequest mock_create_object_map_request;
 
   ::testing::InSequence seq;
+  expect_prepare_lock(mock_image_ctx);
   expect_block_writes(mock_image_ctx);
   if (mock_image_ctx.journal != nullptr) {
     expect_is_journal_replaying(*mock_image_ctx.journal);
@@ -450,6 +468,7 @@ TEST_F(TestMockOperationEnableFeaturesRequest, SetFlagsError) {
                                 mock_set_flags_request, -EINVAL);
   expect_unblock_requests(mock_image_ctx);
   expect_unblock_writes(mock_image_ctx);
+  expect_handle_prepare_lock_complete(mock_image_ctx);
   expect_commit_op_event(mock_image_ctx, -EINVAL);
 
   C_SaferCond cond_ctx;
@@ -488,6 +507,7 @@ TEST_F(TestMockOperationEnableFeaturesRequest, Mirroring) {
   MockEnableMirrorRequest mock_enable_mirror_request;
 
   ::testing::InSequence seq;
+  expect_prepare_lock(mock_image_ctx);
   expect_block_writes(mock_image_ctx);
   expect_block_requests(mock_image_ctx);
   expect_create_journal_request_send(mock_image_ctx,
@@ -497,6 +517,7 @@ TEST_F(TestMockOperationEnableFeaturesRequest, Mirroring) {
   expect_notify_update(mock_image_ctx);
   expect_unblock_requests(mock_image_ctx);
   expect_unblock_writes(mock_image_ctx);
+  expect_handle_prepare_lock_complete(mock_image_ctx);
 
   C_SaferCond cond_ctx;
   MockEnableFeaturesRequest *req = new MockEnableFeaturesRequest(
@@ -534,12 +555,14 @@ TEST_F(TestMockOperationEnableFeaturesRequest, JournalingError) {
   MockEnableMirrorRequest mock_enable_mirror_request;
 
   ::testing::InSequence seq;
+  expect_prepare_lock(mock_image_ctx);
   expect_block_writes(mock_image_ctx);
   expect_block_requests(mock_image_ctx);
   expect_create_journal_request_send(mock_image_ctx,
                                      mock_create_journal_request, -EINVAL);
   expect_unblock_requests(mock_image_ctx);
   expect_unblock_writes(mock_image_ctx);
+  expect_handle_prepare_lock_complete(mock_image_ctx);
 
   C_SaferCond cond_ctx;
   MockEnableFeaturesRequest *req = new MockEnableFeaturesRequest(
@@ -577,6 +600,7 @@ TEST_F(TestMockOperationEnableFeaturesRequest, MirroringError) {
   MockEnableMirrorRequest mock_enable_mirror_request;
 
   ::testing::InSequence seq;
+  expect_prepare_lock(mock_image_ctx);
   expect_block_writes(mock_image_ctx);
   expect_block_requests(mock_image_ctx);
   expect_create_journal_request_send(mock_image_ctx,
@@ -586,6 +610,7 @@ TEST_F(TestMockOperationEnableFeaturesRequest, MirroringError) {
   expect_notify_update(mock_image_ctx);
   expect_unblock_requests(mock_image_ctx);
   expect_unblock_writes(mock_image_ctx);
+  expect_handle_prepare_lock_complete(mock_image_ctx);
 
   C_SaferCond cond_ctx;
   MockEnableFeaturesRequest *req = new MockEnableFeaturesRequest(
